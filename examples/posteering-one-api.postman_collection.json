@@ -1,0 +1,96 @@
+{
+  "info": {
+    "name": "Posteering One API (signed)",
+    "description": "Ready-to-use One API collection. The collection-level pre-request script signs every request with your HMAC credential automatically (the One-Api-Hmac-* consumer leg) — so your first call works instead of returning 401. Set the collection variables one_api_key_id, one_api_secret, and one_api_base, then Send.\n\nThe signing script is byte-verified against the gateway's own verifier for a fixed test vector. Docs: https://posteering.com/docs/one-api/authentication#sign-a-request",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "one_api_base", "value": "https://one.posteering.com/api/v1/one", "type": "string" },
+    { "key": "one_api_key_id", "value": "", "type": "string" },
+    { "key": "one_api_secret", "value": "", "type": "string" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Posteering One API — consumer-leg HMAC signer (auto-signs every request).",
+          "// Byte-verified against the gateway verifier for a fixed vector. Do not edit the",
+          "// canonical-string construction; adjust only which headers you bind (signedHeaders).",
+          "const CryptoJS = require('crypto-js');",
+          "",
+          "const keyId  = pm.collectionVariables.get('one_api_key_id') || pm.variables.get('one_api_key_id');",
+          "const secret = pm.collectionVariables.get('one_api_secret') || pm.variables.get('one_api_secret');",
+          "if (!keyId || !secret) { throw new Error('Set collection variables one_api_key_id and one_api_secret.'); }",
+          "",
+          "// Hash the EXACT bytes that will be sent. Resolve variables in the raw body so the",
+          "// hashed bytes match the wire bytes (re-serialization is the #1 cause of mismatch).",
+          "const rawBody = pm.request.body && pm.request.body.raw ? pm.request.body.raw : '';",
+          "const body = pm.variables.replaceIn(rawBody);",
+          "",
+          "const method = pm.request.method.toUpperCase();",
+          "const url = new URL(pm.variables.replaceIn(pm.request.url.toString()));",
+          "const path = url.pathname;",
+          "// Sorted query string ('' if none), matching the verifier's canonicalization.",
+          "const params = [...url.searchParams.entries()].map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).sort();",
+          "const query = params.join('&');",
+          "",
+          "const ts = new Date().toISOString();",
+          "const nonce = (typeof require === 'function' ? (function(){ try { return require('uuid').v4(); } catch(e){ return null; } })() : null)",
+          "  || (Date.now() + '-' + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2));",
+          "const signedHeaders = 'one-api-hmac-timestamp,one-api-hmac-nonce';  // must be non-empty",
+          "",
+          "const bodyHash = CryptoJS.SHA256(body || '').toString(CryptoJS.enc.Hex);",
+          "let canonical = [method, path, query, ts, nonce, signedHeaders, bodyHash].join('\\n');",
+          "// Value-binding: append name:value for each signed header, in order.",
+          "canonical += `\\none-api-hmac-timestamp:${ts}\\none-api-hmac-nonce:${nonce}`;",
+          "const signature = CryptoJS.HmacSHA256(canonical, secret).toString(CryptoJS.enc.Hex);",
+          "",
+          "pm.request.headers.upsert({ key: 'One-Api-Hmac-Key-Id',         value: keyId });",
+          "pm.request.headers.upsert({ key: 'One-Api-Hmac-Timestamp',      value: ts });",
+          "pm.request.headers.upsert({ key: 'One-Api-Hmac-Nonce',          value: nonce });",
+          "pm.request.headers.upsert({ key: 'One-Api-Hmac-Signed-Headers', value: signedHeaders });",
+          "pm.request.headers.upsert({ key: 'One-Api-Hmac-Signature',      value: signature });"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Collections",
+      "item": [
+        {
+          "name": "Provision a collection VA (DCS)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reference\": \"order-123\",\n  \"holder_name\": \"Payer Name\",\n  \"holder_phone\": \"08012345678\"\n}"
+            },
+            "url": {
+              "raw": "{{one_api_base}}/products/bankrail-gateway/passthrough/virtual-accounts",
+              "host": [ "{{one_api_base}}" ],
+              "path": [ "products", "bankrail-gateway", "passthrough", "virtual-accounts" ]
+            },
+            "description": "Provision a virtual account money is paid to. Returns the VA; a customer pays it, a collection posts."
+          }
+        },
+        {
+          "name": "List collection VAs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{one_api_base}}/products/bankrail-gateway/passthrough/virtual-accounts",
+              "host": [ "{{one_api_base}}" ],
+              "path": [ "products", "bankrail-gateway", "passthrough", "virtual-accounts" ]
+            },
+            "description": "List the merchant's provisioned collection VAs."
+          }
+        }
+      ]
+    }
+  ]
+}

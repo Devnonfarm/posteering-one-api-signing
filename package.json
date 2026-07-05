@@ -1,0 +1,31 @@
+{
+  "name": "@posteering/one-api-signing",
+  "version": "1.0.0",
+  "description": "Official HMAC request signer for the Posteering One API (the One-Api-Hmac-* consumer leg). Self-contained, zero-dependency, drift-guarded against the gateway verifier.",
+  "type": "module",
+  "main": "index.mjs",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "examples/",
+    "test/",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node test/vector.test.mjs"
+  },
+  "keywords": [
+    "posteering",
+    "one-api",
+    "hmac",
+    "request-signing",
+    "fintech"
+  ],
+  "homepage": "https://posteering.com/docs/one-api/authentication",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}
