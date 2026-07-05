@@ -27,5 +27,12 @@
   "license": "MIT",
   "engines": {
     "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Devnonfarm/posteering-one-api-signing.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Devnonfarm/posteering-one-api-signing/issues"
   }
 }
